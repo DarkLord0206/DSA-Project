@@ -1,104 +1,265 @@
-
-#include <bits/stdc++.h>
+#include <iostream>
+#include <cmath>
+#include <vector>
+#include <math.h>
 using namespace std;
-
-// Simple coordinate object to represent points and vectors
-struct XY {
-    float x;
-    float y;
-
-    void pConstruct(float x, float y) {
-        x = x;
-        y = y;
-    }
-};
-
-// Axis-aligned bounding box with half dimension and center
-struct AABB {
-    XY center;
-    float halfDimension;
-
-    void construct(XY center, float halfDimension) {
-        center = center;
-        halfDimension = halfDimension;
-    }
-    bool containsPoint(XY point) {
-        // corners
-        float x1 = center.x - halfDimension;
-        float y1 = center.y - halfDimension;
-
-        float x2 = center.x - halfDimension;
-        float y2 = center.y + halfDimension;
-        
-        float x3 = center.x + halfDimension;
-        float y3 = center.y + halfDimension;
-
-        float x4 = center.x + halfDimension;
-        float y4 = center.y - halfDimension;
-
-        float x0 = point.x;
-        float y0 = point.y;
-
-        if(x0 > x1 && y0 > y1 && x0 > x2 && y0 < y2 && x0 < x2 && y0 < y2 && x0 < x4 && y0 > y4) 
-            return true;
-        else return false;
-    }
-
-    // boundary not included
-    bool intersectsAABB(AABB other) {
-        if(abs(center.x - other.center.x) < halfDimension + other.halfDimension 
-            && abs(center.y - other.center.y) < halfDimension + other.halfDimension) 
-            return true;
-        else return false;
-    }
-};
-
-bool QuadTrees::insert(XY p)
+ 
+// Used to hold details of a point
+struct Point
 {
-    if (!boundary.containsPoint(p))
+    int x;
+    int y;
+    Point(int _x, int _y)
     {
-        return false;
+        x = _x;
+        y = _y;
     }
-    //our QTnodeCapacity is 1 and this check if node
-    // has not been subdivided yet
-    if(points.size < QT_NODE_CAPACITY && northWest == null)
+    Point()
     {
-        points.append(p);  //points is an array containing all points of type XY (see struct)
-        return true;
+        x = 0;
+        y = 0;
     }
-
-    //if node contains point
-    if(northWest == null)
+};
+struct Circle
+{
+    Point center;
+    float radius;
+    Circle(int x,int y,float rad)
     {
-        subdivide();
+        center=Point(x,y);
+        radius=rad;
     }
-
-    //if node is already partitioned, insert into first empty node
-    if (northWest->insert(p)) return true;
-    if (northEast->insert(p)) return true;
-    if (southWest->insert(p)) return true;
-    if (southEast->insert(p)) return true;
-
-    return false; //should never happen
-
-
-}
-vector<XY> QuadTress::queryRange(AABB range){
-    vector<XY> pointsInRange;
-    if(!this.boundary.inersectAABB(range)){
-        return pointtsInRange;
+};
+ 
+// The objects that we want stored in the quadtree
+struct Node
+{
+    Point pos;
+    int data;
+    Node(Point _pos, int _data)
+    {
+        pos = _pos;
+        data = _data;
     }
-    for(int p=0;p<this->points.size();p++){
-        if(range.containsPoint(this->points[p])){
-            pointsInRange.append(this->points[p]);
+    Node()
+    {
+        data = 0;
+    }
+};
+ 
+// The main quadtree class
+class Quad
+{
+    // Hold details of the boundary of this node
+    Point topLeft;
+    Point botRight;
+    Quad *parent;
+ 
+    // Contains details of node
+    Node *n;
+ 
+    // Children of this tree
+    Quad *topLeftTree;
+    Quad *topRightTree;
+    Quad *botLeftTree;
+    Quad *botRightTree;
+ 
+public:
+    Quad()
+    {
+        topLeft = Point(0, 0);
+        botRight = Point(0, 0);
+        n = NULL;
+        parent=NULL;
+        topLeftTree  = NULL;
+        topRightTree = NULL;
+        botLeftTree  = NULL;
+        botRightTree = NULL;
+    }
+    Quad(Point topL, Point botR,Quad* _parent)
+    {
+        parent=_parent;
+        n = NULL;
+        topLeftTree  = NULL;
+        topRightTree = NULL;
+        botLeftTree  = NULL;
+        botRightTree = NULL;
+        topLeft = topL;
+        botRight = botR;
+    }
+    void insert(Node*);
+    Node* search(Point);
+    bool inBoundary(Point);
+    vector<Node> rangeQuery(Circle cir);
+    // vector<Node> rangeQuery(Rectangle rec);
+};
+ 
+// Insert a node into the quadtree
+void Quad::insert(Node *node)
+{
+    if (node == NULL)
+        return;
+ 
+    // Current quad cannot contain it
+    if (!inBoundary(node->pos))
+        return;
+ 
+    // We are at a quad of unit area
+    // We cannot subdivide this quad further
+    if (abs(topLeft.x - botRight.x) <= 1 &&
+        abs(topLeft.y - botRight.y) <= 1)
+    {
+        if (n == NULL)
+            n = node;
+        return;
+    }
+ 
+    if ((topLeft.x + botRight.x) / 2 >= node->pos.x)
+    {
+        // Indicates topLeftTree
+        if ((topLeft.y + botRight.y) / 2 >= node->pos.y)
+        {
+            if (topLeftTree == NULL)
+                topLeftTree = new Quad(
+                    Point(topLeft.x, topLeft.y),
+                    Point((topLeft.x + botRight.x) / 2,
+                        (topLeft.y + botRight.y) / 2),this);
+            topLeftTree->insert(node);
+        }
+ 
+        // Indicates botLeftTree
+        else
+        {
+            if (botLeftTree == NULL)
+                botLeftTree = new Quad(
+                    Point(topLeft.x,
+                        (topLeft.y + botRight.y) / 2),
+                    Point((topLeft.x + botRight.x) / 2,
+                        botRight.y),this);
+            botLeftTree->insert(node);
         }
     }
-    
-    if(northWeat==NULL)
-        return pointsInRange;
-    
-    pointsInRange.append(northWest->queryRange(range));
-    pointsInRange.append(southhWest->queryRange(range));
-    pointsInRange.append(southEast->queryRange(range));
-    pointsInRange.append(northEast->queryRange(range));
+    else
+    {
+        // Indicates topRightTree
+        if ((topLeft.y + botRight.y) / 2 >= node->pos.y)
+        {
+            if (topRightTree == NULL)
+                topRightTree = new Quad(
+                    Point((topLeft.x + botRight.x) / 2,
+                        topLeft.y),
+                    Point(botRight.x,
+                        (topLeft.y + botRight.y) / 2),this);
+            topRightTree->insert(node);
+        }
+ 
+        // Indicates botRightTree
+        else
+        {
+            if (botRightTree == NULL)
+                botRightTree = new Quad(
+                    Point((topLeft.x + botRight.x) / 2,
+                        (topLeft.y + botRight.y) / 2),
+                    Point(botRight.x, botRight.y),this);
+            botRightTree->insert(node);
+        }
+    }
+}
+ 
+// Find a node in a quadtree
+Node* Quad::search(Point p)
+{
+    // Current quad cannot contain it
+    if (!inBoundary(p))
+        return NULL;
+ 
+    // We are at a quad of unit length
+    // We cannot subdivide this quad further
+    if (n != NULL)
+        return n;
+ 
+    if ((topLeft.x + botRight.x) / 2 >= p.x)
+    {
+        // Indicates topLeftTree
+        if ((topLeft.y + botRight.y) / 2 >= p.y)
+        {
+            if (topLeftTree == NULL)
+                return NULL;
+            return topLeftTree->search(p);
+        }
+ 
+        // Indicates botLeftTree
+        else
+        {
+            if (botLeftTree == NULL)
+                return NULL;
+            return botLeftTree->search(p);
+        }
+    }
+    else
+    {
+        // Indicates topRightTree
+        if ((topLeft.y + botRight.y) / 2 >= p.y)
+        {
+            if (topRightTree == NULL)
+                return NULL;
+            return topRightTree->search(p);
+        }
+ 
+        // Indicates botRightTree
+        else
+        {
+            if (botRightTree == NULL)
+                return NULL;
+            return botRightTree->search(p);
+        }
+    }
+};
+ 
+// Check if current quadtree contains the point
+bool Quad::inBoundary(Point p)
+{
+    return (p.x >= topLeft.x &&
+        p.x <= botRight.x &&
+        p.y >= topLeft.y &&
+        p.y <= botRight.y);
+}
+bool inBoundaryCircle(Point p,Circle cir)
+{
+    return abs(cir.radius-sqrt((p.x-cir.center.x)^2+(p.y-cir.center.y)^2))<0.00001;
+}
+// vector<Node> rangeQuery(Circle cir)
+// {
+//     vector<Node> ans;
+
+//     if(inBoundaryCircle(n.point))
+// }
+ 
+// stuff to add
+// range querry box and circle
+// json file with all data
+// nearest neighbour
+// remove point
+// edit file and change vars
+// visuals
+ 
+// Driver program
+int main()
+{
+    Quad center(Point(0, 0), Point(8, 8),NULL);
+    Node a(Point(1, 1), 1);
+    Node b(Point(2, 5), 2);
+    Node c(Point(7, 6), 3);
+    center.insert(&a);
+    center.insert(&b);
+    center.insert(&c);
+    cout << "Node a: " <<
+        center.search(Point(1, 1))->data << "\n";
+    cout << "Node b: " <<
+        center.search(Point(2, 5))->data << "\n";
+    cout << "Node c: " <<
+        center.search(Point(7, 6))->data << "\n";
+    cout << "Non-existing node: "
+        << center.search(Point(5, 5));
+    return 0;
 }
