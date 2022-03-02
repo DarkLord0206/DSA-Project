@@ -21,7 +21,8 @@ struct Point
         y = 0;
     }
 };
-struct Circle
+class 
+class Circle
 {
     Point center;
     float radius;
@@ -93,88 +94,18 @@ public:
         topLeft = topL;
         botRight = botR;
         if (_parent!=NULL)
+        {
             loc = parent->loc + rel_loc;
+        }
         else loc=rel_loc;
     }
     void insert(Node*);
     Node* search(Point);
     bool inBoundary(Point);
-    vector<Node> rangeQuery(Circle cir);
+    void rangeQuery(Circle cir,vector<Node> &ans);
     void subDivide();
     // vector<Node> rangeQuery(Rectangle rec);
 };
- 
-// Insert a node into the quadtree
-// void Quad::insert(Node *node)
-// {
-//     if (node == NULL)
-//         return;
- 
-//     // Current quad cannot contain it
-//     if (!inBoundary(node->pos))
-//         return;
- 
-//     // We are at a quad of unit area
-//     // We cannot subdivide this quad further
-//     if (abs(topLeft.x - botRight.x) <= 1 &&
-//         abs(topLeft.y - botRight.y) <= 1)
-//     {
-//         if (n == NULL)
-//             n = node;
-//         return;
-//     }
- 
-//     if ((topLeft.x + botRight.x) / 2 >= node->pos.x)
-//     {
-//         // Indicates topLeftTree
-//         if ((topLeft.y + botRight.y) / 2 >= node->pos.y)
-//         {
-//             if (topLeftTree == NULL)
-//                 topLeftTree = new Quad(
-//                     Point(topLeft.x, topLeft.y),
-//                     Point((topLeft.x + botRight.x) / 2,
-//                         (topLeft.y + botRight.y) / 2),this, "01");
-//             topLeftTree->insert(node);
-//         }
- 
-//         // Indicates botLeftTree
-//         else
-//         {
-//             if (botLeftTree == NULL)
-//                 botLeftTree = new Quad(
-//                     Point(topLeft.x,
-//                         (topLeft.y + botRight.y) / 2),
-//                     Point((topLeft.x + botRight.x) / 2,
-//                         botRight.y),this, "10");
-//             botLeftTree->insert(node);
-//         }
-//     }
-//     else
-//     {
-//         // Indicates topRightTree
-//         if ((topLeft.y + botRight.y) / 2 >= node->pos.y)
-//         {
-//             if (topRightTree == NULL)
-//                 topRightTree = new Quad(
-//                     Point((topLeft.x + botRight.x) / 2,
-//                         topLeft.y),
-//                     Point(botRight.x,
-//                         (topLeft.y + botRight.y) / 2),this, "00");
-//             topRightTree->insert(node);
-//         }
- 
-//         // Indicates botRightTree
-//         else
-//         {
-//             if (botRightTree == NULL)
-//                 botRightTree = new Quad(
-//                     Point((topLeft.x + botRight.x) / 2,
-//                         (topLeft.y + botRight.y) / 2),
-//                     Point(botRight.x, botRight.y),this, "11");
-//             botRightTree->insert(node);
-//         }
-//     }
-// }
  
  
 void Quad::insert(Node *node)
@@ -188,15 +119,6 @@ void Quad::insert(Node *node)
     {
         return;
     }
-    // We are at a quad of unit area
-    // We cannot subdivide this quad further
-    // if (abs(topLeft.x - botRight.x) <= 1 &&
-    //     abs(topLeft.y - botRight.y) <= 1)
-    // {
-    //     // if (n == NULL)
-    //     //     n = node;
-    //     // return;
-    // }
     if(n == NULL)
     {
         if(topLeftTree == NULL)
@@ -396,7 +318,9 @@ bool Quad::inBoundary(Point p)
 }
 bool inBoundaryCircle(Point p,Circle cir)
 {
-    return abs(cir.radius-sqrt((p.x-cir.center.x)^2+(p.y-cir.center.y)^2))<0.00001;
+    float dist=(p.x-cir.center.x)*(p.x-cir.center.x)+(p.y-cir.center.y)*(p.y-cir.center.y);
+    dist=sqrt(dist);
+    return dist-cir.radius<0.00001;
 }
 void Quad::rangeQuery(Circle cir,vector<Node> &ans)
 {
@@ -404,27 +328,57 @@ void Quad::rangeQuery(Circle cir,vector<Node> &ans)
     Point a3=botRight;
     Point a2 = Point(botRight.x,topLeft.y);
     Point a4 = Point(topLeft.x,botRight.y);
-    if(!(inBoundaryCircle(a1,cir) || inBoundaryCircle(a2,cir) || inBoundaryCircle(a3,cir) || inBoundaryCircle(a4,cir)))
+    if(inBoundaryCircle(a1,cir) || inBoundaryCircle(a2,cir) || inBoundaryCircle(a3,cir) || inBoundaryCircle(a4,cir))
     {
-        return;
+        if(n==NULL)
+        {
+            if(topLeftTree!=NULL)
+            {
+                topLeftTree->rangeQuery(cir,ans);
+            }
+            if(botRightTree!=NULL)
+            {
+                botRightTree->rangeQuery(cir,ans);
+            }
+            if(topRightTree!=NULL)
+            {
+                topRightTree->rangeQuery(cir,ans);
+            }
+            if(botLeftTree!=NULL)
+            {
+                botLeftTree->rangeQuery(cir,ans);
+            }
+        }
+        else
+        { 
+            if(inBoundaryCircle(n->pos,cir))
+            { 
+                ans.push_back(*n);
+            }
+        }
     }
-    if(n==NULL)
-    {
-        if(topLeftTree!=NULL)
-            topLeftTree->rangeQuery(cir,ans);
-        if(botRightTree!=NULL)
-            botRightTree->rangeQuery(cir,ans);
-        if(topRightTree!=NULL)
-            topRightTree->rangeQuery(cir,ans);
-        if(botLeftTree!=NULL)
-            botLeftTree->rangeQuery(cir,ans);
-    }
-    else if(inBoundaryCircle(n->pos,cir))
-    { 
-        ans.push_back(*n);
+    else
+    {   
+        if(inBoundary(cir.center))
+        {
+            if(n==NULL)
+            {
+                if(topLeftTree!=NULL)
+                    topLeftTree->rangeQuery(cir,ans);
+                if(botRightTree!=NULL)
+                    botRightTree->rangeQuery(cir,ans);
+                if(topRightTree!=NULL)
+                    topRightTree->rangeQuery(cir,ans);
+                if(botLeftTree!=NULL)
+                    botLeftTree->rangeQuery(cir,ans);
+            }
+            else if(inBoundaryCircle(n->pos,cir))
+            { 
+                ans.push_back(*n);
+            }
+        }
     }
 }
- 
  
 // stuff to add
 // range querry box and circle
@@ -437,7 +391,7 @@ void Quad::rangeQuery(Circle cir,vector<Node> &ans)
 // Driver program
 int main()
 { 
-    Quad center(Point(0, 0), Point(8, 8),NULL, "");
+    Quad center(Point(0, 0), Point(9, 9),NULL, "");
     Node a(Point(1, 1), 1);
     Node b(Point(2, 5), 2);
     Node c(Point(7, 6), 5);
@@ -452,13 +406,12 @@ int main()
         center.search(Point(2, 5))->data << "\n";
     cout << "Node c: " <<
         center.search(Point(7, 6))->data << "\n";
-    cout << "Non-existing node: "
-        << center.search(Point(4, 4));
-    cout << "Non-existing node: "
-        << center.search(Point(4, 5));
-    cout << "Non-existing node: "
-        << center.search(Point(1, 1));
-    cout << "Non-existing node: "
-        << center.search(Point(6, 3));
+    vector<Node> ans;
+    center.rangeQuery(Circle(5,4,3),ans);
+    // cout<<ans.size();
+    for(auto &x : ans)
+    {
+        cout<<x.data<<" ";
+    }
     return 0;
 }
