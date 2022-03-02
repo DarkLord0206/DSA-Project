@@ -21,8 +21,7 @@ struct Point
         y = 0;
     }
 };
-class 
-class Circle
+struct Circle
 {
     Point center;
     float radius;
@@ -30,6 +29,18 @@ class Circle
     {
         center=Point(x,y);
         radius=rad;
+    }
+};
+struct Rectangle
+{
+    Point center;
+    Point topLeft;
+    Point botRight;
+    Point(Point _topLeft,Point _botRight)
+    {
+        topLeft=_topLeft;
+        botRight=_botRight;
+        center=Point((topLeft.x+botRight.x)/2,(topLeft.y+botRight.y)/2);
     }
 };
  
@@ -309,12 +320,12 @@ Node* Quad::search(Point p)
 };
  
 // Check if current quadtree contains the point
-bool Quad::inBoundary(Point p)
+bool inBoundaryRect(Point p,Rect rec)
 {
-    return (p.x >= topLeft.x &&
-        p.x <= botRight.x &&
-        p.y >= topLeft.y &&
-        p.y <= botRight.y);
+    return (p.x >= rec.topLeft.x &&
+        p.x <= rec.botRight.x &&
+        p.y >= rec.topLeft.y &&
+        p.y <= rec.botRight.y);
 }
 bool inBoundaryCircle(Point p,Circle cir)
 {
@@ -379,7 +390,63 @@ void Quad::rangeQuery(Circle cir,vector<Node> &ans)
         }
     }
 }
- 
+void Quad::rangeQuery(Rectangle rec,vector<Node> &ans)
+{
+    Point a1=topLeft;
+    Point a3=botRight;
+    Point a2 = Point(botRight.x,topLeft.y);
+    Point a4 = Point(topLeft.x,botRight.y);
+    if(inBoundaryRect(a1,rec) || inBoundaryRect(a2,rec) || inBoundaryRect(a3,rec) || inBoundaryRect(a4,rec))
+    {
+        if(n==NULL)
+        {
+            if(topLeftTree!=NULL)
+            {
+                topLeftTree->rangeQuery(rec,ans);
+            }
+            if(botRightTree!=NULL)
+            {
+                botRightTree->rangeQuery(rec,ans);
+            }
+            if(topRightTree!=NULL)
+            {
+                topRightTree->rangeQuery(rec,ans);
+            }
+            if(botLeftTree!=NULL)
+            {
+                botLeftTree->rangeQuery(rec,ans);
+            }
+        }
+        else
+        { 
+            if(inBoundaryRect(n->pos,rec))
+            { 
+                ans.push_back(*n);
+            }
+        }
+    }
+    else
+    {   
+        if(inBoundaryRect(Rectangle(topLeft,botRight),rec.center))
+        {
+            if(n==NULL)
+            {
+                if(topLeftTree!=NULL)
+                    topLeftTree->rangeQuery(rec,ans);
+                if(botRightTree!=NULL)
+                    botRightTree->rangeQuery(rec,ans);
+                if(topRightTree!=NULL)
+                    topRightTree->rangeQuery(rec,ans);
+                if(botLeftTree!=NULL)
+                    botLeftTree->rangeQuery(rec,ans);
+            }
+            else if(inBoundaryRect(n->pos,rec))
+            { 
+                ans.push_back(*n);
+            }
+        }
+    }
+}
 // stuff to add
 // range querry box and circle
 // json file with all data
