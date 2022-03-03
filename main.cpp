@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include <math.h>
+#include <bits/stdc++.h>
 using namespace std;
  
 // Used to hold details of a point
@@ -36,7 +37,7 @@ struct Rectangle
     Point center;
     Point topLeft;
     Point botRight;
-    Point(Point _topLeft,Point _botRight)
+    Rectangle(Point _topLeft,Point _botRight)
     {
         topLeft=_topLeft;
         botRight=_botRight;
@@ -112,9 +113,11 @@ public:
     }
     void insert(Node*);
     Node* search(Point);
-    bool inBoundary(Point);
     void rangeQuery(Circle cir,vector<Node> &ans);
+    void rangeQuery(Rectangle rec,vector<Node> &ans);
     void subDivide();
+    bool inBoundary(Point p);
+    Node* nearestNeighbour(Point target);
     // vector<Node> rangeQuery(Rectangle rec);
 };
  
@@ -318,9 +321,15 @@ Node* Quad::search(Point p)
         }
     }
 };
- 
+bool Quad::inBoundary(Point p)
+{
+    return (p.x >= topLeft.x &&
+        p.x <= botRight.x &&
+        p.y >= topLeft.y &&
+        p.y <= botRight.y);
+}
 // Check if current quadtree contains the point
-bool inBoundaryRect(Point p,Rect rec)
+bool inBoundaryRect(Point p,Rectangle rec)
 {
     return (p.x >= rec.topLeft.x &&
         p.x <= rec.botRight.x &&
@@ -427,7 +436,7 @@ void Quad::rangeQuery(Rectangle rec,vector<Node> &ans)
     }
     else
     {   
-        if(inBoundaryRect(Rectangle(topLeft,botRight),rec.center))
+        if(inBoundaryRect(rec.center,Rectangle(topLeft,botRight)))
         {
             if(n==NULL)
             {
@@ -446,6 +455,31 @@ void Quad::rangeQuery(Rectangle rec,vector<Node> &ans)
             }
         }
     }
+}
+Node* Quad::nearestNeighbour(Point target)
+{
+    int size=1;
+    vector<Node> ans;
+    while(true)
+    {
+        Rectangle area(Point(target.x+size,target.y+size),Point(target.x-size,target.y-size));
+        rangeQuery(area,ans);
+        size++;
+        if(ans.size()>0)
+        {
+            break;
+        }
+    }
+    Node *anser;
+    float dist=-1;
+    for(auto &k:ans)
+    {
+        float temp_dist=(k.pos.x-target.x)*(k.pos.x-target.x)+(k.pos.y-target.y)*(k.pos.y-target.y);
+        temp_dist=sqrt(temp_dist);
+        if(dist==-1 || temp_dist<dist)
+            anser=&k;
+    }
+    return anser;
 }
 // stuff to add
 // range querry box and circle
