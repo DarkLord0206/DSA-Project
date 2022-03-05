@@ -462,7 +462,7 @@ Node* Quad::nearestNeighbour(Point target)
     vector<Node> ans;
     while(true)
     {
-        Rectangle area(Point(target.x+size,target.y+size),Point(target.x-size,target.y-size));
+        Rectangle area(Point(target.x-size,target.y-size),Point(target.x+size,target.y+size));
         rangeQuery(area,ans);
         size++;
         if(ans.size()>0)
@@ -472,10 +472,11 @@ Node* Quad::nearestNeighbour(Point target)
     }
     Node *anser;
     float dist=-1;
-    for(auto &k:ans)
+    for(auto k:ans)
     {
         float temp_dist=(k.pos.x-target.x)*(k.pos.x-target.x)+(k.pos.y-target.y)*(k.pos.y-target.y);
         temp_dist=sqrt(temp_dist);
+        cout<<temp_dist<<endl;
         if(dist==-1 || temp_dist<dist)
             anser=&k;
     }
@@ -508,7 +509,8 @@ int main()
     cout << "Node c: " <<
         center.search(Point(7, 6))->data << "\n";
     vector<Node> ans;
-    center.rangeQuery(Circle(5,4,3),ans);
+    center.rangeQuery(Rectangle(Point(0,0),Point(8,8)),ans);
+    cout<<center.nearestNeighbour(Point(3,3))->data<<endl;
     // cout<<ans.size();
     for(auto &x : ans)
     {
